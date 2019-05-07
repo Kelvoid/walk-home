@@ -18,7 +18,6 @@ Shader "Custom/InteriorMapping - Cubemap"
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
-			#pragma shader_feature _USEOBJECTSPACE
 			#include "UnityCG.cginc"
 
 			struct appdata
