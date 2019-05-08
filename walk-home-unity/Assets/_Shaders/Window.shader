@@ -7,10 +7,12 @@ Shader "Custom/InteriorMapping - Cubemap"
 		_RoomCube("Room Cube Map", Cube) = "white" {}
 		_Frame("Window Frame", 2D) = "white" {}
 		_depth("Room Depth", range(0,4)) = 1
+		_scale("Room Scale", range(0,1)) = 1
+		[HDR] _EmissionColor("Emission Color", Color) = (0,0,0)
 	}
 	SubShader
 	{
-		Tags{ "RenderType" = "Opaque" }
+		Tags{ "RenderType" = "Opaque"}
 		LOD 100
 
 		Pass
@@ -19,6 +21,7 @@ Shader "Custom/InteriorMapping - Cubemap"
 			#pragma vertex vert
 			#pragma fragment frag
 			#include "UnityCG.cginc"
+			#include "UnityLightingCommon.cginc"
 
 			struct appdata
 			{
@@ -37,9 +40,11 @@ Shader "Custom/InteriorMapping - Cubemap"
 
 			samplerCUBE _RoomCube;
 			sampler2D _Frame;
+			half4 _EmissionColor;
 			float4 _RoomCube_ST;
 			float4 _Frame_ST;
 			float _depth;
+			float _scale;
 
 
 		v2f vert(appdata v)
@@ -73,15 +78,18 @@ Shader "Custom/InteriorMapping - Cubemap"
 			float2 roomUV = frac(i.uv);
 
 			// raytrace box from tangent view dir
-			float3 pos = float3(roomUV * 2.0 - 1.0, 1.0 * _depth);
-			float3 id = 1.0 / i.viewDir;
+			float3 pos = float3(roomUV * 2.0 - 1.0, 1.0) * _scale;
+			float3 id = 1.0  / i.viewDir;
 			float3 k = abs(id) - pos * id;
-			float kMin = min(min(k.x, k.y), k.z);
+			float kMin = min(min(k.x, k.y) , k.z);
 			pos += kMin * i.viewDir;
 
 			// sample room cube map
+			half4 emission = tex2D(_Frame, i.uv) * _EmissionColor;
 			fixed4 room = texCUBE(_RoomCube, pos.xyz) * tex2D(_Frame, i.uv);
+			room.rgb += emission.rgb;
 			return fixed4(room.rgb, 1.0);
+
 			}
 			ENDCG
 		}
