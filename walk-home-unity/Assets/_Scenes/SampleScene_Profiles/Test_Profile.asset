@@ -15,7 +15,37 @@ MonoBehaviour:
   settings:
   - {fileID: 114986947668247010}
   - {fileID: 114488762797136286}
-  - {fileID: 114584054836409664}
+  - {fileID: 114841122398912608}
+  - {fileID: 114749480319668730}
+  - {fileID: 114395424590580686}
+--- !u!114 &114395424590580686
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: LookUpTexture
+  m_EditorClassIdentifier: Assembly-CSharp::LookUpTexture
+  active: 1
+  enabled:
+    overrideState: 1
+    value: 1
+  col1:
+    overrideState: 1
+    value: {r: 0.1, g: 0.1, b: 0.1, a: 0}
+  col2:
+    overrideState: 1
+    value: {r: 1, g: 0.79510856, b: 0, a: 0}
+  col3:
+    overrideState: 1
+    value: {r: 0.4, g: 0.4, b: 0.4, a: 0}
+  col4:
+    overrideState: 1
+    value: {r: 0.6, g: 0.6, b: 0.6, a: 0}
 --- !u!114 &114488762797136286
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -28,7 +58,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 40b924e2dad56384a8df2a1e111bb675, type: 3}
   m_Name: Vignette
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   enabled:
     overrideState: 1
     value: 1
@@ -60,7 +90,53 @@ MonoBehaviour:
   opacity:
     overrideState: 0
     value: 1
---- !u!114 &114584054836409664
+--- !u!114 &114542371566529242
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: InverColours
+  m_EditorClassIdentifier: Assembly-CSharp::InverColours
+  active: 1
+  enabled:
+    overrideState: 1
+    value: 1
+  threshold:
+    overrideState: 1
+    value: 1
+  tint:
+    overrideState: 0
+    value:
+      r: 0
+      g: 0
+      b: 0
+      a: 0
+  lut: {fileID: 0}
+--- !u!114 &114749480319668730
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: InvertColours
+  m_EditorClassIdentifier: Assembly-CSharp::InvertColours
+  active: 0
+  enabled:
+    overrideState: 1
+    value: 1
+  threshold:
+    overrideState: 1
+    value: 1
+--- !u!114 &114841122398912608
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
@@ -72,13 +148,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7017e51ff5c861c47887413af7a02d7d, type: 3}
   m_Name: Grayscale
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   enabled:
     overrideState: 1
     value: 1
   blend:
-    overrideState: 0
-    value: 0.5
+    overrideState: 1
+    value: 0
 --- !u!114 &114986947668247010
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -91,7 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 48a79b01ea5641d4aa6daa2e23605641, type: 3}
   m_Name: Bloom
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   enabled:
     overrideState: 1
     value: 1
