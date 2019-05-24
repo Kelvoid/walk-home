@@ -6,9 +6,6 @@ using UnityEngine.Rendering.PostProcessing;
 [PostProcess(typeof(LookUpTextureRenderer), PostProcessEvent.AfterStack, "Custom/LUT")]
 public sealed class LookUpTexture : PostProcessEffectSettings
 {
-    //[Range(0f, 1f), Tooltip("Invert effect intensity.")]
-    //public FloatParameter threshold = new FloatParameter { value = 0.5f };
-
     public ColorParameter col1 = new ColorParameter();
     public ColorParameter col2 = new ColorParameter();
     public ColorParameter col3 = new ColorParameter();
