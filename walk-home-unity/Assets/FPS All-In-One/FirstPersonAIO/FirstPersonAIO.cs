@@ -5,6 +5,9 @@
 ///
 /// DATE || msg: "" || Author Signature: SNG || version VERSION
 ///
+/// 06/07/19 || msg: "Added ability to toggle the ability to jump from the editor." || Author Signature: Adam Worrell || 19.5.12feu >> version 19.6.7cu
+/// 05/12/19 || msg: "Fixed non dymanic footsteping. Remade crouching system to be more efficiant and added an input over ride. || Author Signature: Aedan Graves || version 19.3.22 cl >> 19.5.12feu
+/// 03/22/19 || msg: "Cleaned up code" || Author Signature: Aedan Graves || version 19.3.19cu >> 19.3.22cl
 /// 03/19/19 || msg: "Added a rudimentary slope detection system." || Author Signature: Aedan Graves || version 19.3.18a >> 19.3.19cu
 /// 03/18/19 || msg: "Fixed Stamina" || Author Signature: Aedan Graves || version 19.3.11p >> 19.3.18a
 /// 03/02/19 || msg: "Improved camera System" || Author Signature: Aecan Graves || version 19.3.2 >> 19.3.11p
@@ -46,7 +49,7 @@ using System.Collections;
 public class FirstPersonAIO : MonoBehaviour {
 
     #region Script Header and Cosmetics
-    [Header("            Aedan Graves' First Person All-in-One v19.3.19cu", order = 0)]
+    [Header("                       First Person All-in-One v19.6.7cu", order = 0)]
     [Space(30, order = 1)]
     #endregion
 
@@ -91,24 +94,28 @@ public class FirstPersonAIO : MonoBehaviour {
     [Tooltip("Determines how fast Player walks.")] [Range(0.1f, 10)] public float walkSpeed = 4f;
     [Tooltip("Determines how fast Player Sprints.")] [Range(0.1f, 20)] public float sprintSpeed = 8f;
     [Tooltip("Determines how high Player Jumps.")] [Range(0.1f, 15)] public float jumpPower = 5f;
+    [Tooltip("Determines if the player can jump.")] public bool canJump = true;
     [Tooltip("Determines if the jump button needs to be pressed down to jump, or if the player can hold the jump button to automaticly jump every time the it hits the ground.")] public bool canHoldJump;
     [Tooltip("Determines whether to use Stamina or not.")] [SerializeField] private bool useStamina = true;
     [Tooltip("Determines how quickly the players stamina runs out")] [SerializeField] [Range(0.1f, 9)] private float staminaDepletionSpeed = 2f;
     [Tooltip("Determines how much stamina the player has")] [SerializeField] [Range(0, 100)] private float Stamina = 50;
     [HideInInspector] public float speed;
-    [HideInInspector] public float backgroundStamina;
-    
+    [HideInInspector] public float staminaInternal;
+    internal float walkSpeedInternal;
+    internal float sprintSpeedInternal;
+    internal float jumpPowerInternal;
+
     [System.Serializable]
     public class CrouchModifiers {
         [Tooltip("Determines whether to use Crouch or not.")] public bool useCrouch = true;
-        [SerializeField] [Tooltip("Name of the Input Axis you wish to use for crouching, this must be set up in the InputManager.")]public string CrouchInputAxis;
-        [SerializeField] [Range(0.1f, 4f)] internal float walkSpeedWhileCrouching = 2f;
-        [SerializeField] [Range(0.1f, 8f)] internal float sprintSpeedWhileCrouching = 2f;
-        [SerializeField] [Range(0f, 5f)] internal float jumpPowerWhileCrouching = 0f;
-        internal float defaultWalkSpeed;
-        internal float defaultSprintSpeed;
-        internal float defaultStrafeSpeed;
-        internal float defaultJumpPower;
+        [Tooltip("Name of the Input Axis you wish to use for crouching, this must be set up in the InputManager.")]public string CrouchInputAxis;
+        [Tooltip("How much should the players walking speed be reduced while in the crouching state")] [Range(0.01f, 1.5f)] public float crouchWalkSpeedMultiplier = 0.5f;
+        [Tooltip("How much should the players sprinting speed be reduced while in the crouching state")] [Range(0.01f, 1.5f)] public float crouchSprintSpeedMultiplier = 0.25f;
+        [Tooltip("How much should the players jumping power be reduced while in the crouching state")] [Range(0f, 1.5f)] public float crouchJumpPowerMultiplier = 0f;
+        [Tooltip("Toggle this to override the crouch input axis from another script.")] public bool crouchOverride;
+
+        internal float colliderHeight;
+        
     }
     public CrouchModifiers _crouchModifiers = new CrouchModifiers();
     [System.Serializable]
@@ -133,12 +140,12 @@ public class FirstPersonAIO : MonoBehaviour {
         [HideInInspector] public bool tooSteep;
         [HideInInspector] public RaycastHit surfaceAngleCheck;
     }
-    [SerializeField] private AdvancedSettings advanced = new AdvancedSettings();
+    public AdvancedSettings advanced = new AdvancedSettings();
     private CapsuleCollider capsule;
     private const float jumpRayLength = 0.7f;
     public bool IsGrounded { get; private set; }
     Vector2 inputXY;
-    public bool isCrouching { get; private set; }
+    [HideInInspector] public bool isCrouching;
     bool isSprinting = false;
 
     [HideInInspector] public Rigidbody fps_Rigidbody;
@@ -243,14 +250,14 @@ public class BETA_SETTINGS{
         #endregion 
 
         #region Movement Settings - Awake
+        walkSpeedInternal = walkSpeed;
+        sprintSpeedInternal = sprintSpeed;
+        jumpPowerInternal = jumpPower;
         capsule = GetComponent<CapsuleCollider>();
         IsGrounded = true;
         isCrouching = false;
         fps_Rigidbody = GetComponent<Rigidbody>();
-        _crouchModifiers.defaultWalkSpeed = walkSpeed;
-        _crouchModifiers.defaultSprintSpeed = sprintSpeed;
-        _crouchModifiers.defaultStrafeSpeed = walkSpeed;
-        _crouchModifiers.defaultJumpPower = jumpPower;
+        _crouchModifiers.colliderHeight = capsule.height;
         #endregion
 
         #region Headbobbing Settings - Awake
@@ -288,7 +295,7 @@ public class BETA_SETTINGS{
         #endregion
 
         #region Movement Settings - Start
-        backgroundStamina = Stamina*10;
+        staminaInternal = Stamina*10;
 
         #endregion
 
@@ -350,15 +357,15 @@ public class BETA_SETTINGS{
         
         bool wasWalking = !isSprinting;
         if(useStamina) {
-            if(backgroundStamina > 0) { if(!isCrouching) { isSprinting = Input.GetKey(KeyCode.LeftShift); } }else{isSprinting=false;}
-            if(isSprinting == true && backgroundStamina > 0) { backgroundStamina -= staminaDepletionSpeed; } else if(backgroundStamina < (Stamina*10) && !Input.GetKey(KeyCode.LeftShift)) { backgroundStamina += staminaDepletionSpeed / 2; }    
+            if(staminaInternal > 0) { if(!isCrouching) { isSprinting = Input.GetKey(KeyCode.LeftShift); } }else{isSprinting=false;}
+            if(isSprinting == true && staminaInternal > 0) { staminaInternal -= staminaDepletionSpeed; } else if(staminaInternal < (Stamina*10) && !Input.GetKey(KeyCode.LeftShift)) { staminaInternal += staminaDepletionSpeed / 2; }    
         } else { isSprinting = Input.GetKey(KeyCode.LeftShift); }
 
         advanced.tooSteep = false;
         float inrSprintSpeed;
-        inrSprintSpeed = sprintSpeed;
+        inrSprintSpeed = sprintSpeedInternal;
         Vector3 dMove = Vector3.zero;
-        speed = walkByDefault ? isCrouching ? walkSpeed : (isSprinting ? inrSprintSpeed : walkSpeed) : (isSprinting ? walkSpeed : inrSprintSpeed);
+        speed = walkByDefault ? isCrouching ? walkSpeedInternal : (isSprinting ? inrSprintSpeed : walkSpeedInternal) : (isSprinting ? walkSpeedInternal : inrSprintSpeed);
         Ray ray = new Ray(transform.position, -transform.up);
         if(IsGrounded || fps_Rigidbody.velocity.y < 0.1) {
             RaycastHit[] hits = Physics.RaycastAll(ray, capsule.height * jumpRayLength);
@@ -380,7 +387,7 @@ public class BETA_SETTINGS{
         
             if(Vector3.Angle(advanced.surfaceAngleCheck.normal, Vector3.up)<89){
                         advanced.tooSteep = false;                       
-                        dMove = transform.forward * inputXY.y * speed + transform.right * inputXY.x * walkSpeed;           
+                        dMove = transform.forward * inputXY.y * speed + transform.right * inputXY.x * walkSpeedInternal;           
               if(Vector3.Angle(advanced.surfaceAngleCheck.normal, Vector3.up)>advanced.maxSlopeAngle){
                         advanced.tooSteep = true;
                          isSprinting=false;
@@ -398,7 +405,7 @@ public class BETA_SETTINGS{
        
             if(Vector3.Angle(advanced.surfaceAngleCheck.normal, Vector3.up)<89){
                         advanced.tooSteep = false;             
-                        dMove = transform.forward * inputXY.y * speed + transform.right * inputXY.x * walkSpeed;           
+                        dMove = transform.forward * inputXY.y * speed + transform.right * inputXY.x * walkSpeedInternal;           
               if(Vector3.Angle(advanced.surfaceAngleCheck.normal, Vector3.up)>70){
                         advanced.tooSteep = true;
                          isSprinting=false;
@@ -415,7 +422,7 @@ public class BETA_SETTINGS{
         
             if(Vector3.Angle(advanced.surfaceAngleCheck.normal, Vector3.up)<89){
                         advanced.tooSteep = false;                   
-                        dMove = transform.forward * inputXY.y * speed + transform.right * inputXY.x * walkSpeed;
+                        dMove = transform.forward * inputXY.y * speed + transform.right * inputXY.x * walkSpeedInternal;
               if(Vector3.Angle(advanced.surfaceAngleCheck.normal, Vector3.up)>70){
                         advanced.tooSteep = true;
                          isSprinting=false;
@@ -429,11 +436,11 @@ public class BETA_SETTINGS{
                 }
             }
         }else{advanced.tooSteep = false;
-                        dMove = transform.forward * inputXY.y * speed + transform.right * inputXY.x * walkSpeed;
+                        dMove = transform.forward * inputXY.y * speed + transform.right * inputXY.x * walkSpeedInternal;
             }    
     }
          else{advanced.tooSteep = false;
-                        dMove = transform.forward * inputXY.y * speed + transform.right * inputXY.x * walkSpeed;
+                        dMove = transform.forward * inputXY.y * speed + transform.right * inputXY.x * walkSpeedInternal;
             }
 
 
@@ -444,10 +451,12 @@ public class BETA_SETTINGS{
        
         float yv = fps_Rigidbody.velocity.y;
         bool didJump = canHoldJump?Input.GetButton("Jump"): Input.GetButtonDown("Jump");
-        
-        if(IsGrounded && didJump && jumpPower > 0)
+
+        if (!canJump) didJump = false;
+
+        if(IsGrounded && didJump && jumpPowerInternal > 0)
         {
-            yv += jumpPower;
+            yv += jumpPowerInternal;
             IsGrounded = false;
             didJump=false;
         }
@@ -468,29 +477,19 @@ public class BETA_SETTINGS{
         }
 
         if(_crouchModifiers.useCrouch &&  _crouchModifiers.CrouchInputAxis != string.Empty) {
+            isCrouching = _crouchModifiers.crouchOverride ?  true: Input.GetAxis(_crouchModifiers.CrouchInputAxis) >0;
 
-
-            if(Input.GetButton(_crouchModifiers.CrouchInputAxis)) { if(isCrouching == false) {
-                    capsule.height /= 2;
-                  
-                        walkSpeed = _crouchModifiers.walkSpeedWhileCrouching;
-                        sprintSpeed = _crouchModifiers.sprintSpeedWhileCrouching;
-                        jumpPower = _crouchModifiers.jumpPowerWhileCrouching;
-                    
-                     
-                    isCrouching = true;
-
-                } } else if(isCrouching == true) {
-                capsule.height *= 2;
-           
-                walkSpeed = _crouchModifiers.defaultWalkSpeed;
-                sprintSpeed = _crouchModifiers.defaultSprintSpeed;
-                jumpPower = _crouchModifiers.defaultJumpPower;
-          
-                isCrouching = false;
-
+            if(isCrouching) {
+                    capsule.height = Mathf.MoveTowards(capsule.height, _crouchModifiers.colliderHeight/2, 5*Time.deltaTime);
+                        walkSpeedInternal = walkSpeed*_crouchModifiers.crouchWalkSpeedMultiplier;
+                        sprintSpeedInternal = sprintSpeed*_crouchModifiers.crouchSprintSpeedMultiplier;
+                        jumpPowerInternal = jumpPower* _crouchModifiers.crouchJumpPowerMultiplier;
+                } else {
+                capsule.height = Mathf.MoveTowards(capsule.height, _crouchModifiers.colliderHeight, 5*Time.deltaTime);    
+                walkSpeedInternal = walkSpeed;
+                sprintSpeedInternal = sprintSpeed;
+                jumpPowerInternal = jumpPower;
             }
-
         }
 
         #endregion
@@ -509,7 +508,7 @@ public class BETA_SETTINGS{
         float strideLangthen;
         float flatVel;
 
-        if(useHeadbob == true || dynamicFootstep.useDynamicFootStepProcess == true){
+        if(useHeadbob == true || dynamicFootstep.useDynamicFootStepProcess == true || _useFootStepSounds == true){
             Vector3 vel = (fps_Rigidbody.position - previousPosition) / Time.deltaTime;
             Vector3 velChange = vel - previousVelocity;
             previousPosition = fps_Rigidbody.position;
@@ -632,7 +631,7 @@ public class BETA_SETTINGS{
                         {
                             nextStepTime = headbobCycle + 0.5f;
                             int n = Random.Range(0, footStepSounds.Length);
-                            if(_useFootStepSounds){ audioSource.PlayOneShot(footStepSounds[n],Volume/10); footStepSounds[n] = footStepSounds[0];}
+                            if(_useFootStepSounds){ audioSource.PlayOneShot(footStepSounds[n],Volume/10);}
                             
                         }
                     }

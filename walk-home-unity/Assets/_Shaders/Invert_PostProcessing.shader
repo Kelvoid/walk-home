@@ -24,8 +24,8 @@
 		{
 			HLSLPROGRAM
 
-#pragma vertex VertDefault
-#pragma fragment Frag
+			#pragma vertex VertDefault
+			#pragma fragment Frag
 
 			ENDHLSL
 		}
